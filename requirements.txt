@@ -1,0 +1,24 @@
+# EightySix Chemistry - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Web Server
+Flask==3.0.0
+flask-cors==4.0.0
+
+# AI & Machine Learning
+sentence-transformers==2.2.2
+torch==2.1.0
+
+# PDF Processing
+PyPDF2==3.0.1
+
+# HTTP Requests
+requests==2.31.0
+
+# Progress Bars
+tqdm==4.66.1
+
+# Optional but recommended
+numpy==1.24.3
+
+gunicorn==21.2.0
