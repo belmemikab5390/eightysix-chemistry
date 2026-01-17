@@ -1,25 +1,9 @@
-# EightySix Chemistry - Python Dependencies
-# Compatible with Python 3.11-3.12
-
-# Web Server
 Flask==3.0.0
 flask-cors==4.0.0
-
-# AI & Machine Learning
 sentence-transformers==2.2.2
 torch==2.5.1
-
-# PDF Processing
 PyPDF2==3.0.1
-
-# HTTP Requests
 requests==2.31.0
-
-# Progress Bars
 tqdm==4.66.1
-
-# Production Server
 gunicorn==21.2.0
-
-# Utilities
 numpy==1.26.4
