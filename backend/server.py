@@ -91,8 +91,11 @@ class AITextbookSearch:
             response.raise_for_status()
 
             content_type = response.headers.get("Content-Type", "")
+
             if "application/json" not in content_type:
-            raise Exception("URL did not return JSON. Make sure file is public and direct-download link is correct.")
+                raise Exception(
+                    "URL did not return JSON. Make sure file is public and direct-download link is correct."
+                )
 
             chunks = response.json()
 
