@@ -21,7 +21,6 @@ CORS(app)
 
 # Get from environment (set in Render dashboard)
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', 'your-key-here')
-STORAGE_URL = os.environ.get('STORAGE_URL')
 PORT = int(os.environ.get('PORT', 5000))
 PRODUCTION = os.environ.get('PRODUCTION', 'false').lower() == 'true'
 
