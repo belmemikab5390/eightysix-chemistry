@@ -36,26 +36,26 @@ BOOK_LIBRARY = {
     'zumdahl': {
         'name': 'General Chemistry',
         'author': 'Zumdahl & Zumdahl',
-        'chunks_url': f'{STORAGE_URL}/zumdahl_chunks_with_embeddings.json',
-        'pdf_url': None  # PDF viewing disabled in production
+        'chunks_url': 'https://drive.google.com/uc?export=download&id=1jYCaCjhM5Po6ucgzNbAW7n9DVE6wTr0G',
+        'pdf_url': 'https://drive.google.com/uc?export=view&id=1ElyPAg8BLiycLWtbZ7nCXJ9k9tqEAu3n'
     },
     'atkins': {
         'name': 'Physical Chemistry',
         'author': 'Atkins & de Paula',
-        'chunks_url': f'{STORAGE_URL}/atkins_chunks_with_embeddings.json',
-        'pdf_url': None
+        'chunks_url': 'https://drive.google.com/uc?export=download&id=1jYCaCjhM5Po6ucgzNbAW7n9DVE6wTr0G',
+        'pdf_url': 'https://drive.google.com/uc?export=view&id=1ElyPAg8BLiycLWtbZ7nCXJ9k9tqEAu3n'
     },
     'harris': {
         'name': 'Quantitative Chemical Analysis',
         'author': 'Daniel C. Harris',
-        'chunks_url': f'{STORAGE_URL}/harris_chunks_with_embeddings.json',
-        'pdf_url': None
+        'chunks_url': 'https://drive.google.com/uc?export=download&id=1oSSwyWZSvMNEEvkunCE4U_xO4h3uh4pF',
+        'pdf_url': 'https://drive.google.com/uc?export=view&id=1w9vWa_T76YmOe-1OoCSkOYhlfbtWk_UM'
     },
     'klein': {
         'name': 'Organic Chemistry',
         'author': 'David Klein',
-        'chunks_url': f'{STORAGE_URL}/klein_chunks_with_embeddings.json',
-        'pdf_url': None
+        'chunks_url': 'https://drive.google.com/uc?export=download&id=1KdiO7gnP26-1M5_nY55hGQCjqLI11ALE',
+        'pdf_url': 'https://drive.google.com/uc?export=view&id=1FXaL5Xt_8kraeWisR22HGkNqDdNcF4ZQ'
     }
 }
 
@@ -84,21 +84,26 @@ class AITextbookSearch:
         print("⚠️  No chunks loaded - will load on book selection")
     
     def load_chunks_from_url(self, url):
-        """Load chunks from R2 URL"""
         try:
             print(f"📥 Fetching chunks from: {url}")
-            response = requests.get(url, timeout=30)
+
+            response = requests.get(url, timeout=60)
             response.raise_for_status()
-            
+
+            content_type = response.headers.get("Content-Type", "")
+            if "application/json" not in content_type:
+            raise Exception("URL did not return JSON. Make sure file is public and direct-download link is correct.")
+
             chunks = response.json()
-            print(f"✅ Loaded {len(chunks)} chunks from R2")
-            
+
             self.chunks = chunks
             self.textbook = {'pages': chunks}
+
+            print(f"✅ Loaded {len(chunks)} chunks")
             return True
-            
+
         except Exception as e:
-            print(f"❌ Error loading from R2: {e}")
+            print("LOAD ERROR:", e)
             return False
     
     def smart_search(self, question):
@@ -608,4 +613,4 @@ if __name__ == '__main__':
     print(f"🌐 Port: {PORT}")
     print("=" * 60)
     
-    app.run(host='0.0.0.0', port=PORT, debug=not PRODUCTION)
+   app.run(host='0.0.0.0', port=PORT))
