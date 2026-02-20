@@ -138,22 +138,22 @@ class AITextbookSearch:
         return context, top_score, is_relevant
     
         def get_candidate_pages(self, topic, top_k=5):
-        topic_words = set(topic.lower().split())
+            topic_words = set(topic.lower().split())
 
-        scored = []
-        for chunk in self.chunks:
-            text_words = set(chunk["text"].lower().split())
-            overlap = len(topic_words & text_words)
-            score = overlap / (len(topic_words) + 1)
+            scored = []
+            for chunk in self.chunks:
+                text_words = set(chunk["text"].lower().split())
+                overlap = len(topic_words & text_words)
+                score = overlap / (len(topic_words) + 1)
 
-            scored.append({
-                'page': chunk['page'],
-                'text': chunk['text'],
-                'score': score
-            })
+                scored.append({
+                    'page': chunk['page'],
+                    'text': chunk['text'],
+                    'score': score
+                })
 
-        scored.sort(key=lambda x: x['score'], reverse=True)
-        return scored[:top_k]
+            scored.sort(key=lambda x: x['score'], reverse=True)
+            return scored[:top_k]
 
 
 # Initialize AI search
