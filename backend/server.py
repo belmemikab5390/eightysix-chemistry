@@ -1,77 +1,71 @@
 """
 EightySix Chemistry - Production Server
-Cloud-ready with R2 storage integration
+Cloudflare R2 Storage + Semantic Search
 """
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from flask_cors import CORS
+from sentence_transformers import SentenceTransformer, util
 import requests
 import json
 import os
 import re
 from datetime import datetime
-from pptx import Presentation
-
-B2_KEY_ID = os.environ.get("B2_KEY_ID")
-B2_APP_KEY = os.environ.get("B2_APP_KEY")
-B2_BUCKET_NAME = os.environ.get("B2_BUCKET_NAME")
 
 app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# CONFIGURATION - ENVIRONMENT VARIABLES
+# ENVIRONMENT CONFIGURATION
 # ============================================
 
-# Get from environment (set in Render dashboard)
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', 'your-key-here')
+R2_BUCKET_URL = os.environ.get('R2_BUCKET_URL', 'https://pub-xxxxx.r2.dev')
 PORT = int(os.environ.get('PORT', 5000))
 PRODUCTION = os.environ.get('PRODUCTION', 'false').lower() == 'true'
 
-# OpenRouter configuration
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = os.environ.get('MODEL', 'xiaomi/mimo-v2-flash:free')
 
+print(f"🔧 Configuration loaded")
+print(f"   R2 URL: {R2_BUCKET_URL}")
+print(f"   API Key: {'✅ Set' if OPENROUTER_API_KEY != 'your-key-here' else '❌ Not set'}")
+
 # ============================================
-# BOOK LIBRARY - R2 URLs (NO LOCAL PATHS!)
+# BOOK LIBRARY - R2 CLOUD STORAGE
 # ============================================
 
 BOOK_LIBRARY = {
     'zumdahl': {
         'name': 'General Chemistry',
         'author': 'Zumdahl & Zumdahl',
-        'chunks_file': 'chunks_with_embeddings.json',
-        'pdf_file': 'zumdhal.pdf'
+        'chunks_url': f'{R2_BUCKET_URL}/zumdahl_chunks_with_embeddings.json'
     },
     'atkins': {
         'name': 'Physical Chemistry',
         'author': 'Atkins & de Paula',
-        'chunks_file': 'atkins_chunks_with_embeddings.json',
-        'pdf_file': 'atkins_physical_chemistry.pdf'
+        'chunks_url': f'{R2_BUCKET_URL}/atkins_chunks_with_embeddings.json'
     },
     'harris': {
         'name': 'Quantitative Chemical Analysis',
         'author': 'Daniel C. Harris',
-        'chunks_file': 'harris_chunks_with_embeddings.json',
-        'pdf_file': 'harris_quantitative_analysis.pdf'
+        'chunks_url': f'{R2_BUCKET_URL}/harris_chunks_with_embeddings.json'
     },
     'klein': {
         'name': 'Organic Chemistry',
         'author': 'David Klein',
-        'chunks_file': 'klein_chunks_with_embeddings.json',
-        'pdf_file': 'klein_organic_chemistry.pdf'
+        'chunks_url': f'{R2_BUCKET_URL}/klein_chunks_with_embeddings.json'
     }
 }
 
-# Currently loaded book
 current_book_info = {
-    'id': 'zumdahl',
-    'name': 'General Chemistry',
-    'author': 'Zumdahl & Zumdahl'
+    'id': None,
+    'name': 'No book loaded',
+    'author': ''
 }
 
 # ============================================
-# AI TEXTBOOK SEARCH
+# AI SEARCH ENGINE
 # ============================================
 
 class AITextbookSearch:
@@ -79,91 +73,120 @@ class AITextbookSearch:
     LOW_CONFIDENCE = 0.35
     
     def __init__(self):
-        print("🔧 Initializing AI Textbook Search...")
-        self.model = None  # no local model
-        print("✅ Running in API mode (no local model)")
+        """Initialize with semantic search model"""
+        print("\n🤖 Initializing AI Search Engine...")
+        print("📥 Loading sentence transformer model...")
+        
+        try:
+            self.model = None
+            print("✅ Model loaded successfully!")
+        except Exception as e:
+            print(f"❌ Error loading model: {e}")
+            self.model = None
         
         self.chunks = []
         self.textbook = None
-        print("⚠️  No chunks loaded - will load on book selection")
+        print("⏳ Ready to load books from R2\n")
     
-    def load_chunks_from_b2(self, filename):
+    def load_chunks_from_r2(self, url):
+        """Load chunks from Cloudflare R2"""
         try:
-            print(f"📥 Loading from B2: {filename}")
-
-            bucket = get_b2_bucket()
-            file = bucket.download_file_by_name(filename)
-
-            import io, json
-            buffer = io.BytesIO()
-            file.save(buffer)
-            buffer.seek(0)
-
-            chunks = json.load(buffer)
-
+            print(f"\n📥 Fetching from R2: {url}")
+            
+            response = requests.get(url, timeout=60)
+            response.raise_for_status()
+            
+            chunks = response.json()
+            
             self.chunks = chunks
             self.textbook = {'pages': chunks}
-
-            print(f"✅ Loaded {len(chunks)} chunks from B2")
+            
+            print(f"✅ Loaded {len(chunks)} chunks successfully!")
             return True
-
+            
+        except requests.exceptions.Timeout:
+            print("❌ Timeout: R2 took too long to respond")
+            return False
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Network error: {e}")
+            return False
+        except json.JSONDecodeError:
+            print("❌ Invalid JSON in chunks file")
+            return False
         except Exception as e:
-            print("B2 LOAD ERROR:", e)
+            print(f"❌ Unexpected error: {e}")
             return False
     
     def smart_search(self, question):
+        """Semantic search with relevance scoring"""
         if not self.chunks:
             return "No textbook loaded. Please select a book first.", 0.0, False
-
-        question_words = set(question.lower().split())
-
-        scored = []
-        for chunk in self.chunks:
-            text_words = set(chunk["text"].lower().split())
-            overlap = len(question_words & text_words)
-            score = overlap / (len(question_words) + 1)
-            scored.append((chunk, score))
-
-        scored.sort(key=lambda x: x[1], reverse=True)
-
-        if not scored:
-            return "No relevant content found.", 0.0, False
-
-        top_chunk, top_score = scored[0]
-        is_relevant = top_score > 0.1
-
-        context = "\n\n".join([
-            f"[Page {c['page']}] {c['text']}"
-            for c, _ in scored[:3]
-        ])
-
-        return context, top_score, is_relevant
+        
+        if not self.model:
+            return "Search model not available.", 0.0, False
+        
+        try:
+            # Encode question
+            question_embedding = self.model.encode(question)
+            
+            # Score all chunks
+            scored_chunks = []
+            for chunk in self.chunks:
+                similarity = util.cos_sim(question_embedding, chunk['embedding']).item()
+                scored_chunks.append((chunk, similarity))
+            
+            # Sort by similarity
+            scored_chunks.sort(key=lambda x: x[1], reverse=True)
+            
+            if not scored_chunks:
+                return "No content found.", 0.0, False
+            
+            # Get top result
+            top_chunk, top_similarity = scored_chunks[0]
+            is_relevant = top_similarity >= self.LOW_CONFIDENCE
+            
+            # Build context from top 3
+            context = "\n\n".join([
+                f"[Page {chunk['page']}] {chunk['text']}"
+                for chunk, _ in scored_chunks[:3]
+            ])
+            
+            return context, top_similarity, is_relevant
+            
+        except Exception as e:
+            print(f"❌ Search error: {e}")
+            return f"Search error: {str(e)}", 0.0, False
     
     def get_candidate_pages(self, topic, top_k=5):
-        topic_words = set(topic.lower().split())
+        """Get top pages for a topic"""
+        if not self.chunks or not self.model:
+            return []
+        
+        try:
+            topic_embedding = self.model.encode(topic)
+            
+            scored = []
+            for chunk in self.chunks:
+                similarity = util.cos_sim(topic_embedding, chunk['embedding']).item()
+                scored.append({
+                    'page': chunk['page'],
+                    'text': chunk['text'],
+                    'score': similarity
+                })
+            
+            scored.sort(key=lambda x: x['score'], reverse=True)
+            return scored[:top_k]
+            
+        except Exception as e:
+            print(f"❌ Error getting pages: {e}")
+            return []
 
-        scored = []
-        for chunk in self.chunks:
-            text_words = set(chunk["text"].lower().split())
-            overlap = len(topic_words & text_words)
-            score = overlap / (len(topic_words) + 1)
 
-            scored.append({
-                'page': chunk['page'],
-                'text': chunk['text'],
-                'score': score
-            })
-
-        scored.sort(key=lambda x: x['score'], reverse=True)
-        return scored[:top_k]
-
-
-# Initialize AI search
+# Initialize search engine
 ai_search = AITextbookSearch()
 
-default = BOOK_LIBRARY["zumdahl"]
 # ============================================
-# HELPER FUNCTIONS
+# AI HELPER
 # ============================================
 
 def call_ai(prompt, system_prompt="You are an expert chemistry tutor."):
@@ -201,27 +224,18 @@ def call_ai(prompt, system_prompt="You are an expert chemistry tutor."):
     except Exception as e:
         return f"Error: {str(e)}"
 
-
 # ============================================
 # ROUTES
 # ============================================
 
-@app.route('/')
+@app.route('/', methods=['GET'])
 def home():
-    """Serve info page"""
+    """API info"""
     return jsonify({
         'name': 'EightySix Chemistry API',
-        'version': '1.0',
+        'version': '2.0',
         'status': 'running',
-        'endpoints': {
-            'health': '/health',
-            'ask': '/ask',
-            'load_book': '/load-book',
-            'library': '/get-library',
-            'flashcards': '/generate-flashcards',
-            'ppt_upload': '/upload-ppt',
-            'materials': '/generate-study-materials'
-        }
+        'endpoints': ['/health', '/ask', '/load-book', '/get-library', '/generate-flashcards']
     })
 
 
@@ -234,8 +248,8 @@ def health():
         'textbook_loaded': ai_search.textbook is not None,
         'chunks_count': len(ai_search.chunks),
         'current_book': current_book_info,
-        'storage_configured': True,
-        'api_configured': OPENROUTER_API_KEY != 'your-key-here'
+        'model_loaded': ai_search.model is not None,
+        'r2_configured': R2_BUCKET_URL != 'https://pub-xxxxx.r2.dev'
     })
 
 
@@ -248,7 +262,7 @@ def load_book():
         data = request.json
         book_id = data.get('bookId')
         
-        print(f"\n📚 Request to load book: {book_id}")
+        print(f"\n📚 Loading book: {book_id}")
         
         if book_id not in BOOK_LIBRARY:
             return jsonify({
@@ -257,18 +271,16 @@ def load_book():
             }), 404
         
         book = BOOK_LIBRARY[book_id]
-        chunks_url = book['chunks_file']
         
-        print(f"📖 Loading: {book['name']} by {book['author']}")
-        print(f"📂 From R2: {chunks_url}")
+        print(f"📖 {book['name']} by {book['author']}")
         
-        # Load chunks from R2
-        success = ai_search.load_chunks_from_b2(chunks_url)
+        # Load from R2
+        success = ai_search.load_chunks_from_r2(book['chunks_url'])
         
         if not success:
             return jsonify({
                 'success': False,
-                'error': 'Failed to load chunks from R2'
+                'error': 'Failed to load from R2. Check R2_BUCKET_URL.'
             }), 500
         
         # Update current book
@@ -277,8 +289,6 @@ def load_book():
             'name': book['name'],
             'author': book['author']
         }
-        
-        print(f"✅ Successfully loaded {len(ai_search.chunks)} chunks")
         
         return jsonify({
             'success': True,
@@ -289,7 +299,7 @@ def load_book():
         })
         
     except Exception as e:
-        print(f"❌ Error loading book: {e}")
+        print(f"❌ Error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -300,14 +310,14 @@ def load_book():
 
 @app.route('/get-library', methods=['GET'])
 def get_library():
-    """Get list of available books"""
+    """Get available books"""
     books = []
-    for book_id, book_info in BOOK_LIBRARY.items():
+    for book_id, info in BOOK_LIBRARY.items():
         books.append({
             'id': book_id,
-            'name': book_info['name'],
-            'author': book_info['author'],
-            'available': True  # All books available in R2
+            'name': info['name'],
+            'author': info['author'],
+            'available': True
         })
     
     return jsonify({
@@ -316,23 +326,7 @@ def get_library():
         'current_book': current_book_info
     })
 
-from flask import send_file
-import io
 
-@app.route("/pdf/<filename>")
-def serve_pdf(filename):
-    try:
-        bucket = get_b2_bucket()
-        file = bucket.download_file_by_name(filename)
-
-        buffer = io.BytesIO()
-        file.save(buffer)
-        buffer.seek(0)
-
-        return send_file(buffer, mimetype="application/pdf")
-
-    except Exception as e:
-        return {"error": str(e)}, 500
 @app.route('/ask', methods=['POST'])
 def ask():
     """Answer questions"""
@@ -341,7 +335,7 @@ def ask():
         question = data.get('question', '')
         complexity = data.get('complexity', 3)
         
-        print(f"\n📝 Question: {question}")
+        print(f"\n📝 Q: {question}")
         
         if not ai_search.chunks:
             return jsonify({
@@ -349,38 +343,35 @@ def ask():
                 'error': 'No textbook loaded. Please select a book first.'
             }), 400
         
-        # Search for answer
+        # Search
         context, similarity, is_relevant = ai_search.smart_search(question)
         
         print(f"🔍 Similarity: {similarity:.3f}, Relevant: {is_relevant}")
         
-        # Generate response
-        complexity_levels = {
-            1: "Explain simply, like to a beginner.",
-            2: "Explain clearly for high school level.",
-            3: "Balanced explanation with proper terminology.",
-            4: "Detailed explanation for advanced students.",
-            5: "Comprehensive university-level explanation."
+        # Generate answer
+        complexity_map = {
+            1: "Explain simply for beginners.",
+            2: "Clear high school level explanation.",
+            3: "Balanced explanation with proper terms.",
+            4: "Detailed for advanced students.",
+            5: "Comprehensive university level."
         }
         
-        instruction = complexity_levels.get(complexity, complexity_levels[3])
+        instruction = complexity_map.get(complexity, complexity_map[3])
         
         if is_relevant:
-            prompt = f"""You are a chemistry tutor.
+            prompt = f"""Chemistry tutor answering from textbook.
 
-TEXTBOOK CONTEXT:
+CONTEXT:
 {context}
 
-STUDENT QUESTION: {question}
+QUESTION: {question}
 
-INSTRUCTIONS: {instruction}
+{instruction}
 
-Provide a clear, accurate answer based on the textbook context."""
+Provide accurate answer based on context."""
         else:
-            prompt = f"""The student asked: "{question}"
-
-This doesn't seem related to the current chemistry textbook. 
-Politely let them know and offer to help with chemistry topics from the book."""
+            prompt = f"The student asked: '{question}' - This isn't in the textbook. Politely redirect to chemistry topics."
         
         answer = call_ai(prompt)
         
@@ -394,10 +385,7 @@ Politely let them know and offer to help with chemistry topics from the book."""
         
     except Exception as e:
         print(f"❌ Error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/generate-flashcards', methods=['POST'])
@@ -408,13 +396,10 @@ def generate_flashcards():
         topic = data.get('topic', '')
         count = data.get('count', 5)
         
-        print(f"\n🎴 Generating {count} flashcards for: {topic}")
+        print(f"\n🎴 Generating {count} flashcards: {topic}")
         
         if not ai_search.chunks:
-            return jsonify({
-                'success': False,
-                'error': 'No textbook loaded'
-            }), 400
+            return jsonify({'success': False, 'error': 'No textbook loaded'}), 400
         
         # Get relevant pages
         pages = ai_search.get_candidate_pages(topic, top_k=3)
@@ -422,17 +407,17 @@ def generate_flashcards():
         if not pages or pages[0]['score'] < 0.3:
             return jsonify({
                 'success': False,
-                'error': f'Topic "{topic}" not found in textbook'
+                'error': f'Topic "{topic}" not found'
             }), 404
         
-        # Combine content
+        # Build prompt
         content = "\n\n".join([p['text'][:1000] for p in pages])
         
-        prompt = f"""Create {count} flashcards about {topic} from this content:
+        prompt = f"""Create {count} flashcards about {topic}:
 
 {content}
 
-Format EXACTLY as:
+Format:
 Q: [Question]
 A: [Answer]
 
@@ -441,7 +426,7 @@ A: [Answer]"""
         
         response = call_ai(prompt)
         
-        # Parse flashcards
+        # Parse
         flashcards = []
         lines = response.split('\n')
         current_q = None
@@ -466,208 +451,23 @@ A: [Answer]"""
         
     except Exception as e:
         print(f"❌ Error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route("/healthz")
-def healthz():
-    return "ok", 200
-    
-@app.route('/upload-ppt', methods=['POST'])
-def upload_ppt():
-    """Process PowerPoint"""
-    try:
-        if 'file' not in request.files:
-            return jsonify({'success': False, 'error': 'No file'}), 400
-        
-        file = request.files['file']
-        
-        if not file.filename.endswith(('.ppt', '.pptx')):
-            return jsonify({'success': False, 'error': 'Must be .ppt/.pptx'}), 400
-        
-        print(f"\n📊 Processing: {file.filename}")
-        
-        # Save temp
-        temp_path = f"temp_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
-        file.save(temp_path)
-        
-        try:
-            prs = Presentation(temp_path)
-            
-            slides_content = []
-            for i, slide in enumerate(prs.slides, 1):
-                slide_data = {
-                    'slide_number': i,
-                    'title': '',
-                    'content': [],
-                    'notes': ''
-                }
-                
-                for shape in slide.shapes:
-                    if hasattr(shape, "text") and shape.text.strip():
-                        text = shape.text.strip()
-                        
-                        if hasattr(shape, 'placeholder_format'):
-                            try:
-                                if shape.placeholder_format.type == 1:
-                                    slide_data['title'] = text
-                                    continue
-                            except:
-                                pass
-                        
-                        slide_data['content'].append(text)
-                
-                try:
-                    if slide.has_notes_slide:
-                        notes = slide.notes_slide.notes_text_frame
-                        if notes and notes.text:
-                            slide_data['notes'] = notes.text.strip()
-                except:
-                    pass
-                
-                slides_content.append(slide_data)
-            
-            print(f"✅ Extracted {len(slides_content)} slides")
-            
-            # Clean up
-            os.remove(temp_path)
-            
-            return jsonify({
-                'success': True,
-                'slides': slides_content,
-                'total_slides': len(slides_content),
-                'filename': file.filename
-            })
-            
-        except Exception as e:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-            raise e
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route("/book-pdf/<book_id>")
-def get_book_pdf(book_id):
-    try:
-        book = BOOK_LIBRARY.get(book_id)
-        if not book:
-            return {"error": "Book not found"}, 404
 
-        filename = book["pdf_file"]
-
-        bucket = get_b2_bucket()
-        file = bucket.download_file_by_name(filename)
-
-        import io
-        buffer = io.BytesIO()
-        file.save(buffer)
-        buffer.seek(0)
-
-        from flask import send_file
-        return send_file(buffer, mimetype="application/pdf")
-
-    except Exception as e:
-        return {"error": str(e)}, 500
-@app.route('/generate-study-materials', methods=['POST'])
-def generate_study_materials():
-    """Generate study materials from slides"""
-    try:
-        data = request.json
-        slides = data.get('slides', [])
-        material_type = data.get('type', 'notes')
-        
-        print(f"\n📚 Generating {material_type} from {len(slides)} slides")
-        
-        # Combine content
-        full_content = ""
-        for slide in slides:
-            full_content += f"\n\n=== Slide {slide['slide_number']}"
-            if slide['title']:
-                full_content += f": {slide['title']}"
-            full_content += " ===\n"
-            full_content += "\n".join(slide['content'])
-            if slide['notes']:
-                full_content += f"\n\nNotes: {slide['notes']}"
-        
-        results = {}
-        
-        # Generate based on type
-        if material_type in ['notes', 'all']:
-            prompt = f"Create study notes from this lecture:\n\n{full_content}\n\nUse clear headings and formatting."
-            results['notes'] = call_ai(prompt)
-        
-        if material_type in ['reviewer', 'all']:
-            prompt = f"Create an exam reviewer from:\n\n{full_content}\n\nFocus on key concepts and practice problems."
-            results['reviewer'] = call_ai(prompt)
-        
-        if material_type in ['flashcards', 'all']:
-            prompt = f"Create 15 flashcards from:\n\n{full_content}\n\nFormat: Q: ... A: ..."
-            text = call_ai(prompt)
-            
-            flashcards = []
-            lines = text.split('\n')
-            current_q = None
-            
-            for line in lines:
-                line = line.strip()
-                if line.startswith('Q:'):
-                    current_q = line[2:].strip()
-                elif line.startswith('A:') and current_q:
-                    flashcards.append({
-                        'front': current_q,
-                        'back': line[2:].strip()
-                    })
-                    current_q = None
-            
-            results['flashcards'] = flashcards
-        
-        if material_type in ['summary', 'all']:
-            prompt = f"Create a one-page summary:\n\n{full_content}"
-            results['summary'] = call_ai(prompt)
-        
-        if material_type in ['quiz', 'all']:
-            prompt = f"Create 10 MCQ questions:\n\n{full_content}"
-            results['quiz'] = call_ai(prompt)
-        
-        return jsonify({
-            'success': True,
-            'materials': results
-        })
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-from b2sdk.v2 import InMemoryAccountInfo, B2Api
-
-def get_b2_bucket():
-    info = InMemoryAccountInfo()
-    b2 = B2Api(info)
-
-    b2.authorize_account(
-        "production",
-        B2_KEY_ID,
-        B2_APP_KEY
-    )
-
-    return b2.get_bucket_by_name(B2_BUCKET_NAME)
 # ============================================
 # START SERVER
 # ============================================
 
 if __name__ == '__main__':
-    print("=" * 60)
-    print("🤖 EIGHTYSIX CHEMISTRY - PRODUCTION SERVER")
+    print("\n" + "=" * 60)
+    print("🧪 EIGHTYSIX CHEMISTRY - PRODUCTION SERVER")
     print("=" * 60)
     print(f"🌐 Mode: {'PRODUCTION' if PRODUCTION else 'DEVELOPMENT'}")
-    print(f"📚 Books: {len(BOOK_LIBRARY)}")
-    print(f"✅ Storage: {'Configured' if B2_BUCKET_NAME else 'Not configured'}")
-    print(f"✅ API: {'Configured' if OPENROUTER_API_KEY != 'your-key-here' else 'Not configured'}")
+    print(f"📚 Books: {len(BOOK_LIBRARY)} available")
+    print(f"☁️  Storage: Cloudflare R2")
+    print(f"🔑 API Key: {'✅ Configured' if OPENROUTER_API_KEY != 'your-key-here' else '❌ Missing'}")
+    print(f"📦 R2 URL: {'✅ Configured' if R2_BUCKET_URL != 'https://pub-xxxxx.r2.dev' else '❌ Missing'}")
     print(f"🌐 Port: {PORT}")
-    print("=" * 60)
+    print("=" * 60 + "\n")
     
-    app.run(host='0.0.0.0', port=PORT)
+    app.run(host='0.0.0.0', port=PORT, debug=not PRODUCTION)
