@@ -43,7 +43,7 @@ BOOK_LIBRARY = {
     'atkins': {
         'name': 'Physical Chemistry',
         'author': 'Atkins & de Paula',
-        'chunks_url': f'{{STORAGE_URL}/atkins_chunks_with_embeddings.json',
+        'chunks_url': f'{STORAGE_URL}/atkins_chunks_with_embeddings.json',
         'pdf_url': None
     },
     'harris': {
@@ -103,33 +103,32 @@ class AITextbookSearch:
             return False
     
     def smart_search(self, question):
-        """Search with relevance checking"""
         if not self.chunks:
             return "No textbook loaded. Please select a book first.", 0.0, False
-        
-        question_embedding = self.model.encode(question)
-        
-        best_chunks = []
+
+        question_words = set(question.lower().split())
+
+        scored = []
         for chunk in self.chunks:
-            similarity = util.cos_sim(question_embedding, chunk['embedding']).item()
-            best_chunks.append((chunk, similarity))
-        
-        best_chunks.sort(key=lambda x: x[1], reverse=True)
-        
-        if not best_chunks:
+            text_words = set(chunk["text"].lower().split())
+            overlap = len(question_words & text_words)
+            score = overlap / (len(question_words) + 1)
+            scored.append((chunk, score))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+
+        if not scored:
             return "No relevant content found.", 0.0, False
-        
-        top_chunk, top_similarity = best_chunks[0]
-        is_relevant = top_similarity >= self.LOW_CONFIDENCE
-        
-        # Build context from top 3 chunks
-        context_chunks = best_chunks[:3]
+
+        top_chunk, top_score = scored[0]
+        is_relevant = top_score > 0.1
+
         context = "\n\n".join([
-            f"[Page {chunk['page']}] {chunk['text']}"
-            for chunk, _ in context_chunks
+            f"[Page {c['page']}] {c['text']}"
+            for c, _ in scored[:3]
         ])
-        
-        return context, top_similarity, is_relevant
+
+        return context, top_score, is_relevant
     
     def get_candidate_pages(self, topic, top_k=5):
         """Get top candidate pages for a topic"""
