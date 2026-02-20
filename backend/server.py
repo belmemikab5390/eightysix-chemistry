@@ -36,25 +36,25 @@ BOOK_LIBRARY = {
     'zumdahl': {
         'name': 'General Chemistry',
         'author': 'Zumdahl & Zumdahl',
-        'chunks_url': 'https://drive.google.com/uc?export=download&id=1jYCaCjhM5Po6ucgzNbAW7n9DVE6wTr0G',
+        'chunks_url': 'https://drive.google.com/uc?id=1jYCaCjhM5Po6ucgzNbAW7n9DVE6wTr0G',
         'pdf_url': 'https://drive.google.com/uc?export=view&id=1ElyPAg8BLiycLWtbZ7nCXJ9k9tqEAu3n'
     },
     'atkins': {
         'name': 'Physical Chemistry',
         'author': 'Atkins & de Paula',
-        'chunks_url': 'https://drive.google.com/uc?export=download&id=1jYCaCjhM5Po6ucgzNbAW7n9DVE6wTr0G',
+        'chunks_url': 'https://drive.google.com/uc?id=1jYCaCjhM5Po6ucgzNbAW7n9DVE6wTr0G',
         'pdf_url': 'https://drive.google.com/uc?export=view&id=1ElyPAg8BLiycLWtbZ7nCXJ9k9tqEAu3n'
     },
     'harris': {
         'name': 'Quantitative Chemical Analysis',
         'author': 'Daniel C. Harris',
-        'chunks_url': 'https://drive.google.com/uc?export=download&id=1oSSwyWZSvMNEEvkunCE4U_xO4h3uh4pF',
+        'chunks_url': 'https://drive.google.com/uc?id=1oSSwyWZSvMNEEvkunCE4U_xO4h3uh4pF',
         'pdf_url': 'https://drive.google.com/uc?export=view&id=1w9vWa_T76YmOe-1OoCSkOYhlfbtWk_UM'
     },
     'klein': {
         'name': 'Organic Chemistry',
         'author': 'David Klein',
-        'chunks_url': 'https://drive.google.com/uc?export=download&id=1KdiO7gnP26-1M5_nY55hGQCjqLI11ALE',
+        'chunks_url': 'https://drive.google.com/uc?id=1KdiO7gnP26-1M5_nY55hGQCjqLI11ALE',
         'pdf_url': 'https://drive.google.com/uc?export=view&id=1FXaL5Xt_8kraeWisR22HGkNqDdNcF4ZQ'
     }
 }
@@ -92,10 +92,7 @@ class AITextbookSearch:
 
             content_type = response.headers.get("Content-Type", "")
 
-            if "application/json" not in content_type:
-                raise Exception(
-                    "URL did not return JSON. Make sure file is public and direct-download link is correct."
-                )
+            chunks = json.loads(response.text)
 
             chunks = response.json()
 
