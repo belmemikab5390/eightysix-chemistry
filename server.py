@@ -5,7 +5,6 @@ Cloud-ready with R2 storage integration
 
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from sentence_transformers import SentenceTransformer, util
 import requests
 import json
 import os
@@ -77,11 +76,9 @@ class AITextbookSearch:
     LOW_CONFIDENCE = 0.35
     
     def __init__(self):
-        """Initialize AI search (no chunks loaded yet)"""
         print("🔧 Initializing AI Textbook Search...")
-        print("📥 Loading sentence transformer model...")
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        print("✅ Model loaded!")
+        self.model = None  # no local model
+        print("✅ Running in API mode (no local model)")
         
         self.chunks = []
         self.textbook = None
