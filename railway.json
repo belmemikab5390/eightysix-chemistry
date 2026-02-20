@@ -1,0 +1,5 @@
+{
+  "deploy": {
+    "startCommand": "cd backend && gunicorn server:app"
+  }
+}
