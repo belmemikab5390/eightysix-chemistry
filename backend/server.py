@@ -36,7 +36,7 @@ BOOK_LIBRARY = {
     'zumdahl': {
         'name': 'General Chemistry',
         'author': 'Zumdahl & Zumdahl',
-        'chunks_url': 'https://drive.google.com/uc?id=1jYCaCjhM5Po6ucgzNbAW7n9DVE6wTr0G',
+        'chunks_url': 'https://github.com/belmemikab5390/eightysix-chemistry/blob/main/chunks_with_embeddings.json',
         'pdf_url': 'https://drive.google.com/uc?export=view&id=1ElyPAg8BLiycLWtbZ7nCXJ9k9tqEAu3n'
     },
     'atkins': {
