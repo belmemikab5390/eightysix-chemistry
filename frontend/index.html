@@ -4192,21 +4192,18 @@
 </div>
 
 <script>
-  // ALL YOUR EXISTING JAVASCRIPT (from your original file)
-  // API Configuration - Auto-detects local vs production
-// API Configuration
-const API_URL = (() => {
-  // Auto-detect environment
-  const hostname = window.location.hostname;
-  
-  // Local development
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:5000';
-  }
-  
-  // Production - UPDATE THIS AFTER DEPLOYING BACKEND!
-  return 'https://chemistry-backend.onrender.com';
-})();
+// API Configuration — auto detect local vs production
+  const API_URL = (() => {
+    const hostname = window.location.hostname;
+
+    // running locally
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return "http://localhost:5000";
+    }
+
+    // running online (Vercel / deployed site)
+    return "https://web-production-f4867.up.railway.app";
+  })();
 
 console.log('🌐 Environment:', window.location.hostname);
 console.log('🔌 API URL:', API_URL);
