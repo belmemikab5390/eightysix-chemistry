@@ -21,7 +21,7 @@ CORS(app)
 
 # Get from environment (set in Render dashboard)
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', 'your-key-here')
-R2_BUCKET_URL = os.environ.get('R2_BUCKET_URL', 'https://pub-xxxxx.r2.dev')
+STORAGE_URL = os.environ.get('STORAGE_URL')
 PORT = int(os.environ.get('PORT', 5000))
 PRODUCTION = os.environ.get('PRODUCTION', 'false').lower() == 'true'
 
@@ -37,25 +37,25 @@ BOOK_LIBRARY = {
     'zumdahl': {
         'name': 'General Chemistry',
         'author': 'Zumdahl & Zumdahl',
-        'chunks_url': f'{R2_BUCKET_URL}/zumdahl_chunks_with_embeddings.json',
+        'chunks_url': f'{STORAGE_URL}/zumdahl_chunks_with_embeddings.json',
         'pdf_url': None  # PDF viewing disabled in production
     },
     'atkins': {
         'name': 'Physical Chemistry',
         'author': 'Atkins & de Paula',
-        'chunks_url': f'{R2_BUCKET_URL}/atkins_chunks_with_embeddings.json',
+        'chunks_url': f'{{STORAGE_URL}/atkins_chunks_with_embeddings.json',
         'pdf_url': None
     },
     'harris': {
         'name': 'Quantitative Chemical Analysis',
         'author': 'Daniel C. Harris',
-        'chunks_url': f'{R2_BUCKET_URL}/harris_chunks_with_embeddings.json',
+        'chunks_url': f'{STORAGE_URL}/harris_chunks_with_embeddings.json',
         'pdf_url': None
     },
     'klein': {
         'name': 'Organic Chemistry',
         'author': 'David Klein',
-        'chunks_url': f'{R2_BUCKET_URL}/klein_chunks_with_embeddings.json',
+        'chunks_url': f'{STORAGE_URL}/klein_chunks_with_embeddings.json',
         'pdf_url': None
     }
 }
@@ -227,7 +227,7 @@ def health():
         'textbook_loaded': ai_search.textbook is not None,
         'chunks_count': len(ai_search.chunks),
         'current_book': current_book_info,
-        'r2_configured': R2_BUCKET_URL != 'https://pub-xxxxx.r2.dev',
+        'storage_configured': bool(STORAGE_URL),
         'api_configured': OPENROUTER_API_KEY != 'your-key-here'
     })
 
@@ -606,7 +606,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print(f"🌐 Mode: {'PRODUCTION' if PRODUCTION else 'DEVELOPMENT'}")
     print(f"📚 Books: {len(BOOK_LIBRARY)}")
-    print(f"✅ R2: {'Configured' if R2_BUCKET_URL != 'https://pub-xxxxx.r2.dev' else 'Not configured'}")
+    print(f"✅ Storage: {'Configured' if STORAGE_URL else 'Not configured'}")
     print(f"✅ API: {'Configured' if OPENROUTER_API_KEY != 'your-key-here' else 'Not configured'}")
     print(f"🌐 Port: {PORT}")
     print("=" * 60)
