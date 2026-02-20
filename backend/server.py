@@ -156,7 +156,8 @@ class AITextbookSearch:
 # Initialize AI search
 ai_search = AITextbookSearch()
 
-
+default = BOOK_LIBRARY["zumdahl"]
+ai_search.load_chunks_from_url(default["chunks_url"])
 # ============================================
 # HELPER FUNCTIONS
 # ============================================
@@ -450,7 +451,10 @@ A: [Answer]"""
             'error': str(e)
         }), 500
 
-
+@app.route("/healthz")
+def healthz():
+    return "ok", 200
+    
 @app.route('/upload-ppt', methods=['POST'])
 def upload_ppt():
     """Process PowerPoint"""
