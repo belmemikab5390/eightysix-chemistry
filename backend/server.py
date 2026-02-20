@@ -129,7 +129,7 @@ class AITextbookSearch:
 
         return context, top_score, is_relevant
     
-     def get_candidate_pages(self, topic, top_k=5):
+        def get_candidate_pages(self, topic, top_k=5):
         topic_words = set(topic.lower().split())
 
         scored = []
