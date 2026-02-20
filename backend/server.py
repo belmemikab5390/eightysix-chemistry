@@ -39,7 +39,7 @@ BOOK_LIBRARY = {
     'zumdahl': {
         'name': 'General Chemistry',
         'author': 'Zumdahl & Zumdahl',
-        'chunks_url': f'{R2_BUCKET_URL}/data/chunks_with_embeddings.json'
+        'chunks_url': f'{R2_BUCKET_URL}/data/chunks_with_embeddings.json',
         'pdf_url': f'{R2_BUCKET_URL}/data/zumdahl.pdf'
     },
     'atkins': {
