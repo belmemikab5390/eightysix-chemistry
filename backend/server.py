@@ -12,6 +12,10 @@ import re
 from datetime import datetime
 from pptx import Presentation
 
+B2_KEY_ID = os.environ.get("B2_KEY_ID")
+B2_APP_KEY = os.environ.get("B2_APP_KEY")
+B2_BUCKET_NAME = os.environ.get("B2_BUCKET_NAME")
+
 app = Flask(__name__)
 CORS(app)
 
@@ -36,26 +40,26 @@ BOOK_LIBRARY = {
     'zumdahl': {
         'name': 'General Chemistry',
         'author': 'Zumdahl & Zumdahl',
-        'chunks_url': 'https://raw.githubusercontent.com/belmemikab5390/eightysix-chemistry/main/chunks_with_embeddings.json',
-        'pdf_url': 'https://drive.google.com/uc?export=view&id=1ElyPAg8BLiycLWtbZ7nCXJ9k9tqEAu3n'
+        'chunks_file': 'chunks_with_embeddings.json',
+        'pdf_file': 'zumdhal.pdf'
     },
     'atkins': {
         'name': 'Physical Chemistry',
         'author': 'Atkins & de Paula',
-        'chunks_url': 'https://drive.google.com/uc?id=1jYCaCjhM5Po6ucgzNbAW7n9DVE6wTr0G',
-        'pdf_url': 'https://drive.google.com/uc?export=view&id=1ElyPAg8BLiycLWtbZ7nCXJ9k9tqEAu3n'
+        'chunks_file': 'atkins_chunks_with_embeddings.json',
+        'pdf_file': 'atkins_physical_chemistry.pdf'
     },
     'harris': {
         'name': 'Quantitative Chemical Analysis',
         'author': 'Daniel C. Harris',
-        'chunks_url': 'https://drive.google.com/uc?id=1oSSwyWZSvMNEEvkunCE4U_xO4h3uh4pF',
-        'pdf_url': 'https://drive.google.com/uc?export=view&id=1w9vWa_T76YmOe-1OoCSkOYhlfbtWk_UM'
+        'chunks_file': 'harris_chunks_with_embeddings.json',
+        'pdf_file': 'harris_quantitative_analysis.pdf'
     },
     'klein': {
         'name': 'Organic Chemistry',
         'author': 'David Klein',
-        'chunks_url': 'https://drive.google.com/uc?id=1KdiO7gnP26-1M5_nY55hGQCjqLI11ALE',
-        'pdf_url': 'https://drive.google.com/uc?export=view&id=1FXaL5Xt_8kraeWisR22HGkNqDdNcF4ZQ'
+        'chunks_file': 'klein_chunks_with_embeddings.json',
+        'pdf_file': 'klein_organic_chemistry.pdf'
     }
 }
 
@@ -92,7 +96,6 @@ class AITextbookSearch:
 
             content_type = response.headers.get("Content-Type", "")
 
-            chunks = json.loads(response.text)
 
             chunks = response.json()
 
@@ -157,7 +160,7 @@ class AITextbookSearch:
 ai_search = AITextbookSearch()
 
 default = BOOK_LIBRARY["zumdahl"]
-ai_search.load_chunks_from_url(default["chunks_url"])
+ai_search.load_chunks_from_url(default["chunks_file"])
 # ============================================
 # HELPER FUNCTIONS
 # ============================================
@@ -253,7 +256,7 @@ def load_book():
             }), 404
         
         book = BOOK_LIBRARY[book_id]
-        chunks_url = book['chunks_url']
+        chunks_url = book['chunks_file']
         
         print(f"📖 Loading: {book['name']} by {book['author']}")
         print(f"📂 From R2: {chunks_url}")
@@ -312,7 +315,23 @@ def get_library():
         'current_book': current_book_info
     })
 
+from flask import send_file
+import io
 
+@app.route("/pdf/<filename>")
+def serve_pdf(filename):
+    try:
+        bucket = get_b2_bucket()
+        file = bucket.download_file_by_name(filename)
+
+        buffer = io.BytesIO()
+        file.save(buffer)
+        buffer.seek(0)
+
+        return send_file(buffer, mimetype="application/pdf")
+
+    except Exception as e:
+        return {"error": str(e)}, 500
 @app.route('/ask', methods=['POST'])
 def ask():
     """Answer questions"""
@@ -530,7 +549,28 @@ def upload_ppt():
         print(f"❌ Error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route("/book-pdf/<book_id>")
+def get_book_pdf(book_id):
+    try:
+        book = BOOK_LIBRARY.get(book_id)
+        if not book:
+            return {"error": "Book not found"}, 404
 
+        filename = book["pdf_file"]
+
+        bucket = get_b2_bucket()
+        file = bucket.download_file_by_name(filename)
+
+        import io
+        buffer = io.BytesIO()
+        file.save(buffer)
+        buffer.seek(0)
+
+        from flask import send_file
+        return send_file(buffer, mimetype="application/pdf")
+
+    except Exception as e:
+        return {"error": str(e)}, 500
 @app.route('/generate-study-materials', methods=['POST'])
 def generate_study_materials():
     """Generate study materials from slides"""
@@ -601,7 +641,19 @@ def generate_study_materials():
         print(f"❌ Error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+from b2sdk.v2 import InMemoryAccountInfo, B2Api
 
+def get_b2_bucket():
+    info = InMemoryAccountInfo()
+    b2 = B2Api(info)
+
+    b2.authorize_account(
+        "production",
+        B2_KEY_ID,
+        B2_APP_KEY
+    )
+
+    return b2.get_bucket_by_name(B2_BUCKET_NAME)
 # ============================================
 # START SERVER
 # ============================================
@@ -612,7 +664,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print(f"🌐 Mode: {'PRODUCTION' if PRODUCTION else 'DEVELOPMENT'}")
     print(f"📚 Books: {len(BOOK_LIBRARY)}")
-    print(f"✅ Storage: {'Configured' if STORAGE_URL else 'Not configured'}")
+    print(f"✅ Storage: {'Configured' if B2_BUCKET_NAME else 'Not configured'}")
     print(f"✅ API: {'Configured' if OPENROUTER_API_KEY != 'your-key-here' else 'Not configured'}")
     print(f"🌐 Port: {PORT}")
     print("=" * 60)
