@@ -53,21 +53,21 @@ def cosine_similarity(a, b):
      dot = sum(x*y for x,y in zip(a,b))
      magA = math.sqrt(sum(x*x for x in a))
      magB = math.sqrt(sum(x*x for x in b))
-      return dot/(magA*magB)
+     return dot/(magA*magB)
 
- def get_embedding(text):
+  def get_embedding(text):
     response = requests.post(
-         "https://openrouter.ai/api/v1/embeddings",
-         headers={
-              "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-             "Content-Type": "application/json"
-           },
+        "https://openrouter.ai/api/v1/embeddings",
+        headers={
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+         },
         json={
-               "model": "text-embedding-3-small",
-               "input": text
-           },
-          timeout=60
-      )
+             "model": "text-embedding-3-small",
+             "input": text
+        },
+        timeout=60
+    )
 
     response.raise_for_status()
     return response.json()["data"][0]["embedding"]
@@ -120,23 +120,23 @@ class SemanticSearch:
         
         return context, top_score, is_relevant
     
-def get_candidate_pages(self, topic, top_k=5):
-    if not self.chunks:
-        return []
+    def get_candidate_pages(self, topic, top_k=5):
+        if not self.chunks:
+            return []
 
-    topic_embedding = get_embedding(topic)
+        topic_embedding = get_embedding(topic)
 
-    scored = []
-    for chunk in self.chunks:
-        similarity = cosine_similarity(topic_embedding, chunk["embedding"])
-        scored.append({
-            'page': chunk['page'],
-            'text': chunk['text'],
-            'score': similarity
-        })
+        scored = []
+        for chunk in self.chunks:
+            similarity = cosine_similarity(topic_embedding, chunk["embedding"])
+            scored.append({
+                'page': chunk['page'],
+                'text': chunk['text'],
+                'score': similarity
+            })
 
-    scored.sort(key=lambda x: x['score'], reverse=True)
-    return scored[:top_k]
+        scored.sort(key=lambda x: x['score'], reverse=True)
+        return scored[:top_k]
 
 # AI Helper
 def call_ai(prompt, system_prompt="You are an expert chemistry tutor."):
