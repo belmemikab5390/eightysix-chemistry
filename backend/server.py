@@ -342,6 +342,7 @@ def load_book():
         return jsonify({
             'success': True,
             'book_id': book_id,
+            'pdf_url': book["pdf_url"]
             'book_name': book['name'],
             'author': book['author'],
             'chunks_count': len(search_engine.chunks)
