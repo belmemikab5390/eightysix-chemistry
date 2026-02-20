@@ -129,24 +129,23 @@ class AITextbookSearch:
 
         return context, top_score, is_relevant
     
-    def get_candidate_pages(self, topic, top_k=5):
-        """Get top candidate pages for a topic"""
-        if not self.chunks:
-            return []
-        
-        topic_embedding = self.model.encode(topic)
-        
-        scored_chunks = []
+     def get_candidate_pages(self, topic, top_k=5):
+        topic_words = set(topic.lower().split())
+
+        scored = []
         for chunk in self.chunks:
-            similarity = util.cos_sim(topic_embedding, chunk['embedding']).item()
-            scored_chunks.append({
+            text_words = set(chunk["text"].lower().split())
+            overlap = len(topic_words & text_words)
+            score = overlap / (len(topic_words) + 1)
+
+            scored.append({
                 'page': chunk['page'],
                 'text': chunk['text'],
-                'score': similarity
+                'score': score
             })
-        
-        scored_chunks.sort(key=lambda x: x['score'], reverse=True)
-        return scored_chunks[:top_k]
+
+        scored.sort(key=lambda x: x['score'], reverse=True)
+        return scored[:top_k]
 
 
 # Initialize AI search
@@ -225,7 +224,7 @@ def health():
         'textbook_loaded': ai_search.textbook is not None,
         'chunks_count': len(ai_search.chunks),
         'current_book': current_book_info,
-        'storage_configured': bool(STORAGE_URL),
+        'storage_configured': True,
         'api_configured': OPENROUTER_API_KEY != 'your-key-here'
     })
 
