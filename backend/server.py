@@ -87,21 +87,28 @@ class AITextbookSearch:
         self.textbook = None
         print("⚠️  No chunks loaded - will load on book selection")
     
-    def load_chunks_from_url(self, path):
+    def load_chunks_from_b2(self, filename):
         try:
-            print(f"📥 Loading chunks from file: {path}")
+            print(f"📥 Loading from B2: {filename}")
 
-            with open(path, "r", encoding="utf-8") as f:
-                chunks = json.load(f)
+            bucket = get_b2_bucket()
+            file = bucket.download_file_by_name(filename)
+
+            import io, json
+            buffer = io.BytesIO()
+            file.save(buffer)
+            buffer.seek(0)
+
+            chunks = json.load(buffer)
 
             self.chunks = chunks
             self.textbook = {'pages': chunks}
 
-            print(f"✅ Loaded {len(chunks)} chunks")
+            print(f"✅ Loaded {len(chunks)} chunks from B2")
             return True
 
         except Exception as e:
-            print("LOAD ERROR:", e)
+            print("B2 LOAD ERROR:", e)
             return False
     
     def smart_search(self, question):
@@ -155,7 +162,6 @@ class AITextbookSearch:
 ai_search = AITextbookSearch()
 
 default = BOOK_LIBRARY["zumdahl"]
-ai_search.load_chunks_from_url(default["chunks_file"])
 # ============================================
 # HELPER FUNCTIONS
 # ============================================
@@ -257,7 +263,7 @@ def load_book():
         print(f"📂 From R2: {chunks_url}")
         
         # Load chunks from R2
-        success = ai_search.load_chunks_from_url(chunks_url)
+        success = ai_search.load_chunks_from_b2(chunks_url)
         
         if not success:
             return jsonify({
