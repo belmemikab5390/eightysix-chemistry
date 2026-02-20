@@ -87,17 +87,12 @@ class AITextbookSearch:
         self.textbook = None
         print("⚠️  No chunks loaded - will load on book selection")
     
-    def load_chunks_from_url(self, url):
+    def load_chunks_from_url(self, path):
         try:
-            print(f"📥 Fetching chunks from: {url}")
+            print(f"📥 Loading chunks from file: {path}")
 
-            response = requests.get(url, timeout=60)
-            response.raise_for_status()
-
-            content_type = response.headers.get("Content-Type", "")
-
-
-            chunks = response.json()
+            with open(path, "r", encoding="utf-8") as f:
+                chunks = json.load(f)
 
             self.chunks = chunks
             self.textbook = {'pages': chunks}
@@ -137,23 +132,23 @@ class AITextbookSearch:
 
         return context, top_score, is_relevant
     
-        def get_candidate_pages(self, topic, top_k=5):
-            topic_words = set(topic.lower().split())
+    def get_candidate_pages(self, topic, top_k=5):
+        topic_words = set(topic.lower().split())
 
-            scored = []
-            for chunk in self.chunks:
-                text_words = set(chunk["text"].lower().split())
-                overlap = len(topic_words & text_words)
-                score = overlap / (len(topic_words) + 1)
+        scored = []
+        for chunk in self.chunks:
+            text_words = set(chunk["text"].lower().split())
+            overlap = len(topic_words & text_words)
+            score = overlap / (len(topic_words) + 1)
 
-                scored.append({
-                    'page': chunk['page'],
-                    'text': chunk['text'],
-                    'score': score
-                })
+            scored.append({
+                'page': chunk['page'],
+                'text': chunk['text'],
+                'score': score
+            })
 
-            scored.sort(key=lambda x: x['score'], reverse=True)
-            return scored[:top_k]
+        scored.sort(key=lambda x: x['score'], reverse=True)
+        return scored[:top_k]
 
 
 # Initialize AI search
