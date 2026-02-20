@@ -5,11 +5,11 @@ Cloudflare R2 + Semantic Search
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from sentence_transformers import SentenceTransformer, util
 import requests
 import json
 import os
 import re
+import math
 
 app = Flask(__name__)
 CORS(app)
@@ -49,12 +49,36 @@ BOOK_LIBRARY = {
 
 current_book_info = {'id': None, 'name': 'No book loaded', 'author': ''}
 
+def cosine_similarity(a, b):
+     dot = sum(x*y for x,y in zip(a,b))
+     magA = math.sqrt(sum(x*x for x in a))
+     magB = math.sqrt(sum(x*x for x in b))
+      return dot/(magA*magB)
+
+ def get_embedding(text):
+    response = requests.post(
+         "https://openrouter.ai/api/v1/embeddings",
+         headers={
+              "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+             "Content-Type": "application/json"
+           },
+        json={
+               "model": "text-embedding-3-small",
+               "input": text
+           },
+          timeout=60
+      )
+
+    response.raise_for_status()
+    return response.json()["data"][0]["embedding"]
+
+
 # Semantic Search Engine
 class SemanticSearch:
     def __init__(self):
         print("\n🤖 Initializing Semantic Search...")
         print("📥 Loading model...")
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.model = None
         print("✅ Model ready!\n")
         self.chunks = []
         self.textbook = None
@@ -77,11 +101,11 @@ class SemanticSearch:
         if not self.chunks:
             return "No textbook loaded.", 0.0, False
         
-        question_embedding = self.model.encode(question)
+        question_embedding = get_embedding(question)
         
         scored = []
         for chunk in self.chunks:
-            similarity = util.cos_sim(question_embedding, chunk['embedding']).item()
+            similarity = cosine_similarity(question_embedding, chunk["embedding"])
             scored.append((chunk, similarity))
         
         scored.sort(key=lambda x: x[1], reverse=True)
@@ -96,25 +120,23 @@ class SemanticSearch:
         
         return context, top_score, is_relevant
     
-    def get_candidate_pages(self, topic, top_k=5):
-        if not self.chunks:
-            return []
-        
-        topic_embedding = self.model.encode(topic)
-        
-        scored = []
-        for chunk in self.chunks:
-            similarity = util.cos_sim(topic_embedding, chunk['embedding']).item()
-            scored.append({
-                'page': chunk['page'],
-                'text': chunk['text'],
-                'score': similarity
-            })
-        
-        scored.sort(key=lambda x: x['score'], reverse=True)
-        return scored[:top_k]
+def get_candidate_pages(self, topic, top_k=5):
+    if not self.chunks:
+        return []
 
-search_engine = SemanticSearch()
+    topic_embedding = get_embedding(topic)
+
+    scored = []
+    for chunk in self.chunks:
+        similarity = cosine_similarity(topic_embedding, chunk["embedding"])
+        scored.append({
+            'page': chunk['page'],
+            'text': chunk['text'],
+            'score': similarity
+        })
+
+    scored.sort(key=lambda x: x['score'], reverse=True)
+    return scored[:top_k]
 
 # AI Helper
 def call_ai(prompt, system_prompt="You are an expert chemistry tutor."):
