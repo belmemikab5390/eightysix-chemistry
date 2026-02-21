@@ -7817,16 +7817,22 @@ if (typeof lucide !== 'undefined') {
 function highlightSentence(sentence) {
   if (!sentence) return;
 
+  const words = sentence
+    .split(" ")
+    .filter(w => w.length > 4); // ignore small words
+
   const layers = document.querySelectorAll(".textLayer");
 
   layers.forEach(layer => {
-    if (layer.innerText.includes(sentence)) {
-      const regex = new RegExp(sentence, "gi");
-      layer.innerHTML = layer.innerHTML.replace(
-        regex,
-        `<span style="background: yellow; padding:2px;">${sentence}</span>`
-      );
-    }
+    let html = layer.innerHTML;
+
+    words.forEach(word => {
+      const regex = new RegExp(`(${word})`, "gi");
+      html = html.replace(regex,
+        `<span style="background:yellow;">$1</span>`);
+    });
+
+    layer.innerHTML = html;
   });
 }
 </script>
