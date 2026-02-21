@@ -12,7 +12,7 @@ import os
 import re
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # ============================================
 # CONFIGURATION
@@ -376,7 +376,7 @@ def get_library():
     })
 
 
-@app.route('/ask', methods=['POST'])
+@app.route('/ask', methods=['POST','OPTIONS'])
 def ask():
     try:
         data = request.json
