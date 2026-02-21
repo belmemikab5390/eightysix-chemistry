@@ -45,17 +45,20 @@ BOOK_LIBRARY = {
     'atkins': {
         'name': 'Physical Chemistry',
         'author': 'Atkins & de Paula',
-        'chunks_url': f'{R2_BUCKET_URL}/data/atkins_chunks_with_embeddings.json'
+        'chunks_url': f'{R2_BUCKET_URL}/data/atkins_chunks_with_embeddings.json',
+        'pdf_url': f'{R2_BUCKET_URL}/data/atkins_physical_chemistry.pdf'
     },
     'harris': {
         'name': 'Quantitative Chemical Analysis',
         'author': 'Daniel C. Harris',
-        'chunks_url': f'{R2_BUCKET_URL}/data/harris_chunks_with_embeddings.json'
+        'chunks_url': f'{R2_BUCKET_URL}/data/harris_chunks_with_embeddings.json',
+        'pdf_url': f'{R2_BUCKET_URL}/data/harris_quantitative_analysis.pdf'
     },
     'klein': {
         'name': 'Organic Chemistry',
         'author': 'David Klein',
-        'chunks_url': f'{R2_BUCKET_URL}/data/klein_chunks_with_embeddings.json'
+        'chunks_url': f'{R2_BUCKET_URL}/data/klein_chunks_with_embeddings.json',
+        'pdf_url': f'{R2_BUCKET_URL}/data/harris_quantitative_analysis.pdf'
     }
 }
 
@@ -342,7 +345,7 @@ def load_book():
         return jsonify({
             'success': True,
             'book_id': book_id,
-            'pdf_url': book["pdf_url"]
+            'pdf_url': book["pdf_url"],
             'book_name': book['name'],
             'author': book['author'],
             'chunks_count': len(search_engine.chunks)
