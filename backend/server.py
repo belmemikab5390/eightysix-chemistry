@@ -433,7 +433,8 @@ def ask():
     try:
         data = request.json
         question = data.get('question', '')
-        complexity = data.get('complexity', 3)
+        complexity = int(data.get('complexity', 3))
+        complexity = max(1, min(10, complexity))  # clamp 1–10
         
         print(f"\n📝 Question: {question}")
         
@@ -450,11 +451,16 @@ def ask():
         
         # Generate answer
         complexity_map = {
-            1: "Explain simply for beginners with everyday language.",
-            2: "Clear high school level explanation.",
-            3: "Balanced explanation with proper chemistry terms.",
-            4: "Detailed explanation for advanced students.",
-            5: "Comprehensive university-level explanation."
+            1: "Explain very simply like teaching a child.",
+            2: "Explain simply using basic ideas.",
+            3: "Clear high school level explanation.",
+            4: "Balanced explanation with correct terminology.",
+            5: "Detailed explanation for advanced students.",
+            6: "Technical explanation using chemistry language.",
+            7: "Advanced explanation with reasoning and concepts.",
+            8: "University-level explanation.",
+            9: "Expert-level explanation with deep insight.",
+            10: "Professional chemist-level explanation with full detail."
         }
         
         instruction = complexity_map.get(complexity, complexity_map[3])
@@ -470,6 +476,13 @@ STUDENT'S QUESTION:
 
 INSTRUCTIONS:
 {instruction}
+
+FORMAT RULES:
+- Use LaTeX for equations
+- Inline math → $...$
+- Block equations → $$...$$
+- Use headings and structured explanations
+- Be precise and educational
 
 Provide an accurate, helpful answer based on the textbook content above."""
         else:
