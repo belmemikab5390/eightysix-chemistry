@@ -3345,16 +3345,17 @@
     margin: 0 !important;
   }
   .textLayer {
-  position:absolute;
-  left:0;
-  top:0;
-}
+    position:absolute;
+    left:0;
+    top:0;
+    line-height:1;
+  }
 
-.textLayer span {
-  position:absolute;
-  white-space:pre;
-  transform-origin:0% 0%;
-}
+  .textLayer span {
+    position:absolute;
+    white-space:pre;
+    transform-origin:0% 0%;
+  }
 </style>
 </head>
 <body>
@@ -4798,19 +4799,20 @@ console.log('🔌 API URL:', API_URL);
 
     const textLayer = document.createElement("div");
     textLayer.className = "textLayer";
+
     textLayer.style.position = "absolute";
     textLayer.style.top = "0";
     textLayer.style.left = "0";
-    textLayer.style.height = canvas.height + "px";
     textLayer.style.width = canvas.width + "px";
+    textLayer.style.height = canvas.height + "px";
+    textLayer.style.setProperty("--scale-factor", viewport.scale);
 
     pageContainer.appendChild(textLayer);
 
     pdfjsLib.renderTextLayer({
-      textContent,
+      textContentSource: textContent,
       container: textLayer,
-      viewport: viewport,
-      textDivs: []
+      viewport: viewport
     });
     
     // Track page read - with error handling
