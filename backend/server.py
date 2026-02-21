@@ -274,6 +274,42 @@ def call_ai(prompt, system_prompt="You are an expert chemistry tutor."):
         return f"Error: {str(e)}"
 
 # ============================================
+# MOLECULE DETECTOR
+# ============================================
+
+def extract_molecules_from_text(text):
+    """
+    Extract molecule formulas and names from AI response.
+    """
+
+    molecule_patterns = {
+        r'\bH2O\b': 'water',
+        r'\bO2\b': 'oxygen',
+        r'\bH2\b': 'hydrogen',
+        r'\bCO2\b': 'carbon dioxide',
+        r'\bNH3\b': 'ammonia',
+        r'\bCH4\b': 'methane',
+        r'\bNaCl\b': 'sodium chloride',
+        r'\bHCl\b': 'hydrochloric acid',
+        r'\bH2SO4\b': 'sulfuric acid',
+        r'\bbenzene\b': 'benzene'
+    }
+
+    detected = []
+
+    # detect formulas automatically
+    formulas = re.findall(r'\b[A-Z][a-z]?\d*(?:[A-Z][a-z]?\d*)*\b', text)
+    detected.extend(formulas)
+
+    # detect named molecules
+    for pattern, molecule in molecule_patterns.items():
+        if re.search(pattern, text, re.IGNORECASE):
+            if molecule not in detected:
+                detected.append(molecule)
+
+    return list(dict.fromkeys(detected))[:3]
+
+# ============================================
 # ROUTES
 # ============================================
 
@@ -442,13 +478,24 @@ Provide an accurate, helpful answer based on the textbook content above."""
 This doesn't appear to be covered in the current textbook. Politely let them know and suggest they ask about chemistry topics from the book."""
         
         answer = call_ai(prompt)
+        # Extract page number from context
+        page_match = re.search(r'\[Page (\d+)\]', context)
+        page_number = int(page_match.group(1)) if page_match else None
+
+        # Extract molecules
+        molecules = extract_molecules_from_text(answer)
+
+        print("🧪 Molecules detected:", molecules)
+        print("📄 Page detected:", page_number)       
         
         return jsonify({
             'success': True,
             'answer': answer,
             'context': context if is_relevant else '',
             'relevance_score': float(score),
-            'is_relevant': is_relevant
+            'is_relevant': is_relevant,
+            'molecules': molecules,
+            'source': {"page": page_number}
         })
         
     except Exception as e:
