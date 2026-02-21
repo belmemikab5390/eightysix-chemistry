@@ -4,7 +4,7 @@ OpenRouter AI for Everything (No Local Models!)
 Cloudflare R2 Storage
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 import requests
 import json
@@ -276,7 +276,6 @@ def call_ai(prompt, system_prompt="You are an expert chemistry tutor."):
 # ============================================
 # ROUTES
 # ============================================
-from flask import make_response
 
 @app.before_request
 def handle_options():
