@@ -295,7 +295,23 @@ def extract_molecules_from_text(text):
                 detected.append(molecule)
 
     return list(dict.fromkeys(detected))[:3]
+    
+def extract_best_sentence(context, question):
+    sentences = re.split(r'(?<=[.!?]) +', context)
+    question_words = set(re.findall(r'\b\w{3,}\b', question.lower()))
 
+    best = ""
+    best_score = 0
+
+    for s in sentences:
+        words = set(re.findall(r'\b\w{3,}\b', s.lower()))
+        score = len(words & question_words)
+
+        if score > best_score:
+            best_score = score
+            best = s
+
+    return best.strip()
 # ============================================
 # ROUTES
 # ============================================
@@ -488,10 +504,18 @@ This doesn't appear to be covered in the current textbook. Politely let them kno
         print("🧪 Molecules detected:", molecules)
         print("📄 Page detected:", page_number)       
         
+        best_sentence = extract_best_sentence(context, question)
+
+        page_number = None
+        match = re.search(r'\[Page (\d+)\]', context)
+        if match:
+            page_number = int(match.group(1))
+
         return jsonify({
             'success': True,
             'answer': answer,
             'context': context if is_relevant else '',
+            'highlight': best_sentence,
             'relevance_score': float(score),
             'is_relevant': is_relevant,
             'molecules': molecules,
