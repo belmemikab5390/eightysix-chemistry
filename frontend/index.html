@@ -4902,7 +4902,7 @@ console.log('🔌 API URL:', API_URL);
       console.log('🌐 API URL:', API_URL);
       console.log('🎯 Mode:', currentStudyMode, 'Complexity:', currentComplexity);
       
-      const res = await fetch(`${API_URL}/chat`, {
+      const res = await fetch(`${API_URL}/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msg, mode: currentStudyMode, complexity: currentComplexity })
