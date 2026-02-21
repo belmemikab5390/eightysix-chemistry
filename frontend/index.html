@@ -4750,9 +4750,15 @@ console.log('🔌 API URL:', API_URL);
     canvas.className = 'pdf-page-canvas';
     canvas.dataset.pageNumber = pageNumber;
     const context = canvas.getContext('2d');
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
-    const pageContainer = document.createElement('div');
+    const outputScale = window.devicePixelRatio || 1;
+
+    canvas.width = Math.floor(viewport.width * outputScale);
+    canvas.height = Math.floor(viewport.height * outputScale);
+
+    canvas.style.width = viewport.width + "px";
+    canvas.style.height = viewport.height + "px";
+
+    context.setTransform(outputScale, 0, 0, outputScale, 0, 0);    const pageContainer = document.createElement('div');
     pageContainer.className = 'pdf-page-container';
     pageContainer.dataset.pageNumber = pageNumber;
     pageContainer.style.cssText = 'position:relative; box-shadow:0 4px 20px rgba(0,0,0,0.5); background:#fff;';
