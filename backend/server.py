@@ -276,7 +276,24 @@ def call_ai(prompt, system_prompt="You are an expert chemistry tutor."):
 # ============================================
 # ROUTES
 # ============================================
+from flask import make_response
 
+@app.before_request
+def handle_options():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        return response
+        
+@app.after_request
+def add_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    return response
+    
 @app.route('/', methods=['GET'])
 def home():
     return jsonify({
