@@ -107,93 +107,80 @@ class IntelligentSearch:
             return False
     
     def ai_search(self, question):
-        """Use OpenRouter AI to find relevant chunks"""
+
         if not self.chunks:
             return "No textbook loaded.", 0.0, False
-        
+
         try:
-            # Get a small sample of chunks to search through
-            # We'll ask AI to help us find the most relevant ones
-            
-            # Strategy: Use keyword matching first to narrow down,
-            # then use AI to pick the best ones
-            
             question_lower = question.lower()
             question_words = set(re.findall(r'\b\w{3,}\b', question_lower))
-            
-            # Quick keyword pre-filter
+
+            CHEM_TERMS = [
+                "enthalpy","entropy","equilibrium","kinetics",
+                "orbital","stoichiometry","mole","thermodynamics",
+                "acid","base","titration","oxidation","reduction",
+                "electronegativity","bond","reaction","energy"
+            ]
+
             scored = []
+
             for chunk in self.chunks:
-                text_lower = chunk['text'].lower()
-                text_words = set(re.findall(r'\b\w{3,}\b', text_lower))
-                
-                common = question_words & text_words
-                
-                # Boost for exact phrase matches
-                boost = sum(0.3 for word in question_words if len(word) > 4 and word in text_lower)
-                
-                score = (len(common) / max(len(question_words), 1)) + boost
+                text = chunk["text"]
+                text_lower = text.lower()
+
+                # 1️⃣ keyword matches
+                keyword_hits = sum(word in text_lower for word in question_words)
+
+                # 2️⃣ concept boost
+                concept_score = sum(
+                    0.4 for word in question_words if word in text_lower
+                )
+
+                # 3️⃣ exact phrase boost
+                phrase_boost = 2 if question_lower in text_lower else 0
+
+                # 4️⃣ chemistry vocabulary boost
+                chem_boost = 0.5 if any(term in text_lower for term in CHEM_TERMS) else 0
+
+                # 5️⃣ page priority boost
+                page = chunk.get("page", 1000)
+                page_boost = 1 / (page + 1)
+
+                # 6️⃣ length penalty (avoid long irrelevant text)
+                length_penalty = len(text) / 1200
+
+                score = (
+                    keyword_hits +
+                    concept_score +
+                    phrase_boost +
+                    chem_boost +
+                    page_boost -
+                    length_penalty
+                )
+
                 scored.append((chunk, score))
-            
-            # Sort and get top 10 candidates
+
+            # sort by best score
             scored.sort(key=lambda x: x[1], reverse=True)
-            top_candidates = scored[:10]
-            
-            if not top_candidates or top_candidates[0][1] == 0:
+
+            top_candidates = scored[:5]
+
+            if not top_candidates or top_candidates[0][1] <= 0:
                 return "No relevant content found.", 0.0, False
-            
-            # Use AI to pick the best 3 from top 10
-            candidates_text = "\n\n".join([
-                f"[Candidate {i+1}, Page {chunk['page']}]\n{chunk['text'][:500]}"
-                for i, (chunk, _) in enumerate(top_candidates[:5])
-            ])
-            
-            ai_prompt = f"""Given this question: "{question}"
 
-Which of these textbook excerpts is most relevant? Pick the top 3 and rank them.
-
-{candidates_text}
-
-Respond with just the numbers: "1, 3, 5" (most relevant first)"""
-            
-            try:
-                ai_ranking = call_ai(ai_prompt, "You are a chemistry textbook expert.")
-                # Parse the ranking (e.g., "1, 3, 2")
-                numbers = [int(n.strip()) for n in re.findall(r'\d+', ai_ranking)]
-                
-                # Build context from AI-selected chunks
-                context_chunks = []
-                for num in numbers[:3]:
-                    if 1 <= num <= len(top_candidates):
-                        context_chunks.append(top_candidates[num-1][0])
-                
-                if context_chunks:
-                    context = "\n\n".join([
-                        f"[Page {chunk['page']}] {chunk['text']}"
-                        for chunk in context_chunks
-                    ])
-                    # Score based on AI's confidence
-                    score = top_candidates[0][1]
-                    is_relevant = score >= 0.15
-                    return context, score, is_relevant
-                    
-            except:
-                # Fallback: just use keyword scores
-                pass
-            
-            # Default: return top 3 by keyword score
+            # build context from top chunks
             context = "\n\n".join([
                 f"[Page {chunk['page']}] {chunk['text']}"
                 for chunk, _ in top_candidates[:3]
             ])
-            
+
             top_score = top_candidates[0][1]
-            is_relevant = top_score >= 0.15
-            
+            is_relevant = top_score >= 0.5
+
             return context, top_score, is_relevant
-            
+
         except Exception as e:
-            print(f"❌ Search error: {e}")
+            print("❌ Search error:", e)
             return f"Search error: {str(e)}", 0.0, False
     
     def get_candidate_pages(self, topic, top_k=5):
