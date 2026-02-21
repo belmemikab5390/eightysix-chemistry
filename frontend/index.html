@@ -4356,7 +4356,7 @@ console.log('🔌 API URL:', API_URL);
         // Now try to load the PDF file if it exists
         if (book.pdfFile) {
           console.log(`📄 Loading PDF: ${book.pdfFile}`);
-          await loadBookPDFFromServer(book.pdfFile, book.name);
+          await loadBookPDFFromServer(result.pdf_url, result.book_name);
         } else {
           // No PDF file, just show chunks are loaded
           alert(`✅ ${book.name} loaded successfully!\n${result.chunks_count} sections available.\n\nNote: PDF viewer not available for this book.`);
