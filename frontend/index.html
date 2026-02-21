@@ -4905,7 +4905,7 @@ console.log('🔌 API URL:', API_URL);
       const res = await fetch(`${API_URL}/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, mode: currentStudyMode, complexity: currentComplexity })
+        body: JSON.stringify({ question: msg, mode: currentStudyMode, complexity: currentComplexity })
       });
       
       console.log('📨 Response status:', res.status);
