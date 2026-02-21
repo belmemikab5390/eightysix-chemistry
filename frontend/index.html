@@ -4342,6 +4342,12 @@ console.log('🔌 API URL:', API_URL);
       
       const result = await response.json();
       
+      if (data.pdf_url) {
+          const viewer = document.getElementById("pdf-viewer");
+          if (viewer) {
+            viewer.src = data.pdf_url;
+          }
+      }
       pdfjsLib.getDocument(data.pdf_url).promise.then(pdf => {
         window.currentPDF = pdf
         renderPage(1)
