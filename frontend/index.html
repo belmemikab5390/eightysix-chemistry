@@ -4916,9 +4916,9 @@ console.log('🔌 API URL:', API_URL);
       
       if (data.success) {
         console.log('✅ Success! Adding message to chat...');
-        console.log('💬 Response text:', data.response?.substring(0, 100) + '...');
+        console.log('💬 Response text:', data.answer?.substring(0, 100) + '...');
         
-        addChatMessage(data.response, 'ai', data.source);
+        addChatMessage(data.answer, 'ai', data.source);
         console.log('✅ Message added to chat!');
         
         if (data.complexity_used) {
@@ -6025,6 +6025,10 @@ console.log('🔌 API URL:', API_URL);
   }
 
   function formatAIResponse(text) {
+    if (!text || typeof text !== "string") {
+      return "⚠️ AI returned no response.";
+    }
+
     text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>');
     text = text.replace(/^## (.+)$/gm, '<h3>$1</h3>');
     text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
