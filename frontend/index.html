@@ -4352,7 +4352,8 @@ console.log('🔌 API URL:', API_URL);
       pdfjsLib.getDocument(data.pdf_url).promise.then(pdf => {
         window.currentPDF = pdf
         renderPage(1)
-        
+      });
+      
       if (result.success) {
         console.log(`✅ Book chunks loaded: ${result.chunks_count} chunks`);
         
