@@ -4921,6 +4921,15 @@ console.log('🔌 API URL:', API_URL);
         addChatMessage(data.answer, 'ai', data.source);
         console.log('✅ Message added to chat!');
         
+        if (data.source?.page) {
+          setTimeout(() => jumpToPage(data.source.page), 500);
+        }
+
+        if (data.highlight) {
+          setTimeout(() => highlightSentence(data.highlight), 900);
+        }
+        
+        
         if (data.complexity_used) {
           console.log(`✅ Response at complexity level: ${data.complexity_used}/10`);
         }
@@ -7803,6 +7812,22 @@ if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }, 100);
     };
+}
+  
+function highlightSentence(sentence) {
+  if (!sentence) return;
+
+  const layers = document.querySelectorAll(".textLayer");
+
+  layers.forEach(layer => {
+    if (layer.innerText.includes(sentence)) {
+      const regex = new RegExp(sentence, "gi");
+      layer.innerHTML = layer.innerHTML.replace(
+        regex,
+        `<span style="background: yellow; padding:2px;">${sentence}</span>`
+      );
+    }
+  });
 }
 </script>
 
