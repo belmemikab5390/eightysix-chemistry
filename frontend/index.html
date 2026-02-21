@@ -7857,24 +7857,23 @@ if (typeof lucide !== 'undefined') {
 }
   
 function highlightSentence(sentence) {
-  if (!sentence) return;
+  console.log("Highlighting:", sentence);
+
+  const spans = document.querySelectorAll(".textLayer span");
 
   const words = sentence
-    .split(" ")
-    .filter(w => w.length > 4); // ignore small words
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .split(/\s+/)
+    .filter(w => w.length > 3); // ignore small words
 
-  const layers = document.querySelectorAll(".textLayer");
+  spans.forEach(span => {
+    const text = span.textContent.toLowerCase().replace(/[^\w]/g,"");
 
-  layers.forEach(layer => {
-    let html = layer.innerHTML;
-
-    words.forEach(word => {
-      const regex = new RegExp(`(${word})`, "gi");
-      html = html.replace(regex,
-        `<span style="background:yellow;">$1</span>`);
-    });
-
-    layer.innerHTML = html;
+    if (words.some(word => text.includes(word))) {
+      span.style.background = "yellow";
+      span.style.borderRadius = "2px";
+    }
   });
 }
 </script>
