@@ -7753,7 +7753,10 @@ function renderChunksContents() {
     </div>
   `).join('');
 }
-
+function toggleChatHistory() {
+    const panel = document.getElementById("chat-history");
+    panel.classList.toggle("open");
+}
 function renderChunksBooks() {
   const booksList = document.getElementById('chunks-books-list');
   
