@@ -7857,20 +7857,28 @@ if (typeof lucide !== 'undefined') {
 }
   
 function highlightSentence(sentence) {
+  console.log("Highlighting:", sentence);
+
+  const STOPWORDS = [
+    "the","and","for","are","with","that","this","from",
+    "have","will","into","your","what","when","where",
+    "how","why","was","were","been","being","has","had"
+  ];
+
   const spans = document.querySelectorAll(".textLayer span");
 
-  const target = sentence
+  const keywords = sentence
     .toLowerCase()
-    .replace(/[^\w\s]/g,"")
-    .trim();
+    .replace(/[^\w\s]/g, "")
+    .split(/\s+/)
+    .filter(w => w.length > 4 && !STOPWORDS.includes(w));
 
-  spans.forEach(span=>{
-    const text = span.textContent
-      .toLowerCase()
-      .replace(/[^\w\s]/g,"");
+  spans.forEach(span => {
+    const text = span.textContent.toLowerCase();
 
-    if (target.includes(text) && text.length > 3) {
-      span.classList.add("highlighted");
+    if (keywords.some(word => text.includes(word))) {
+      span.style.background = "yellow";
+      span.style.borderRadius = "2px";
     }
   });
 }
