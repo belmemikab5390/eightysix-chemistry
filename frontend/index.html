@@ -7857,22 +7857,20 @@ if (typeof lucide !== 'undefined') {
 }
   
 function highlightSentence(sentence) {
-  console.log("Highlighting:", sentence);
-
   const spans = document.querySelectorAll(".textLayer span");
 
-  const words = sentence
+  const target = sentence
     .toLowerCase()
-    .replace(/[^\w\s]/g, "")
-    .split(/\s+/)
-    .filter(w => w.length > 3); // ignore small words
+    .replace(/[^\w\s]/g,"")
+    .trim();
 
-  spans.forEach(span => {
-    const text = span.textContent.toLowerCase().replace(/[^\w]/g,"");
+  spans.forEach(span=>{
+    const text = span.textContent
+      .toLowerCase()
+      .replace(/[^\w\s]/g,"");
 
-    if (words.some(word => text.includes(word))) {
-      span.style.background = "yellow";
-      span.style.borderRadius = "2px";
+    if (target.includes(text) && text.length > 3) {
+      span.classList.add("highlighted");
     }
   });
 }
